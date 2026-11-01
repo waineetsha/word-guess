@@ -1,0 +1,49 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function member(roomId) {
+      return signedIn() && exists(/databases/$(database)/documents/rooms/$(roomId)/members/$(request.auth.uid))
+        && get(/databases/$(database)/documents/rooms/$(roomId)/members/$(request.auth.uid)).data.status == 'active';
+    }
+    function host(roomId) {
+      return member(roomId) && get(/databases/$(database)/documents/rooms/$(roomId)).data.hostUid == request.auth.uid;
+    }
+    match /rooms/{roomId} {
+      allow read: if member(roomId);
+      allow create: if signedIn() && request.resource.data.hostUid == request.auth.uid;
+      allow update: if member(roomId);
+      allow delete: if host(roomId);
+      match /members/{uid} {
+        allow read: if member(roomId);
+        allow create: if signedIn() && uid == request.auth.uid && request.resource.data.uid == request.auth.uid;
+        allow update: if member(roomId) && (uid == request.auth.uid || host(roomId));
+        allow delete: if host(roomId);
+      }
+      match /games/{gameId} {
+        allow read: if member(roomId);
+        allow create, update: if member(roomId);
+        allow delete: if host(roomId);
+        match /privateWords/{uid} {
+          allow read: if member(roomId) && uid == request.auth.uid;
+          allow create, update: if member(roomId);
+          allow delete: if host(roomId);
+        }
+        match /publicCards/{uid} {
+          allow read: if member(roomId) && uid != request.auth.uid;
+          allow create, update: if member(roomId);
+          allow delete: if host(roomId);
+        }
+        match /events/{eventId} {
+          allow read, create, update: if member(roomId);
+          allow delete: if host(roomId);
+          match /votes/{uid} {
+            allow create: if member(roomId) && uid == request.auth.uid;
+            allow read: if member(roomId) && (uid == request.auth.uid || get(/databases/$(database)/documents/rooms/$(roomId)/games/$(gameId)).data.voteVotedUids.size() == get(/databases/$(database)/documents/rooms/$(roomId)/games/$(gameId)).data.voteEligibleUids.size());
+            allow update, delete: if false;
+          }
+        }
+      }
+    }
+  }
+}
