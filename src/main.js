@@ -8,7 +8,7 @@ const state = {
   room: null, members: [], game: null, events: [], secretWord: '', gameCards: [], secretGameId: '', secretRevealGameId: '',
   busy: false, error: '', notice: '', unsubscribe: null, selectedVote: '', resolvingGameId: '',
 };
-const genres = { animals: '動物', food: '食べ物', objects: '身の回りのもの' };
+const genres = { animals: '動物', food: '食べ物', objects: '身の回りのもの', places: '場所', jobs: '職業', nature: '自然' };
 const savedName = localStorage.getItem('word-game-display-name') || '';
 
 function escapeHtml(value = '') {
@@ -268,3 +268,4 @@ else {
     } else render();
   }).catch((error) => { state.error = errorMessage(error); render(); });
 }
+
