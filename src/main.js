@@ -53,8 +53,8 @@ function memberCard(member, currentGame = state.game) {
   const isMe = member.uid === state.uid;
   const won = currentGame?.winnerUids?.includes(member.uid);
   const isPlayer = member.status === 'active' && ['host', 'player'].includes(member.role);
-  const word = isMe ? (state.secretWord || '？？？') : (state.gameCards.find((card) => card.uid === member.uid)?.wordText || 'ワード');
-  return `<article class="player-card ${isMe ? 'me' : ''}">${won ? '<span class="winner-mark">★ 勝利</span>' : ''}${isMe ? '<div class="player-you">あなた</div>' : ''}<div class="player-name">${escapeHtml(member.displayName || '参加者')}${!isPlayer ? ' <span class="tag">観戦者</span>' : ''}</div><div class="player-word ${isMe && !state.secretWord ? 'hidden' : ''}">${escapeHtml(word)}</div></article>`;
+  const word = isMe ? '？？？' : (state.gameCards.find((card) => card.uid === member.uid)?.wordText || 'ワード');
+  return `<article class="player-card ${isMe ? 'me' : ''}">${won ? '<span class="winner-mark">★ 勝利</span>' : ''}${isMe ? '<div class="player-you">あなた</div>' : ''}<div class="player-name">${escapeHtml(member.displayName || '参加者')}${!isPlayer ? ' <span class="tag">観戦者</span>' : ''}</div><div class="player-word ${isMe ? 'hidden' : ''}">${escapeHtml(word)}</div></article>`;
 }
 function eventCard(event) {
   const actor = state.members.find((m) => m.uid === event.actorUid)?.displayName || '参加者';
