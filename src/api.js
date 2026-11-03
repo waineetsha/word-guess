@@ -3,7 +3,7 @@ import {
   runTransaction, serverTimestamp,
 } from 'firebase/firestore';
 import { auth, db } from './firebase.js';
-import { drawWords } from './word-pools.js';
+import { drawRandomGenre, drawWords } from './word-pools.js';
 
 const rooms = () => collection(db, 'rooms');
 const roomDocument = (roomId) => doc(db, 'rooms', roomId);
@@ -131,8 +131,7 @@ async function makeGame(tx, roomRef, room, playerDocs, genreId) {
 }
 
 async function startGame(uid, data) {
-  const roomRef = roomDocument(data.roomId); const genreId = data.genreId || 'animals';
-  assert(['animals', 'food', 'objects'].includes(genreId), 'invalid-argument', 'ジャンルを選び直してください。');
+  const roomRef = roomDocument(data.roomId); const genreId = drawRandomGenre();
   const membersSnap = await getDocs(collection(roomRef, 'members'));
   const roster = membersSnap.docs.filter((item) => item.data().status === 'active' && ['host', 'player'].includes(item.data().role)).sort((a, b) => Number(a.data().seat) - Number(b.data().seat));
   return runTransaction(db, async (tx) => {
@@ -296,6 +295,7 @@ async function startNextGame(uid, data) {
   const initialGame = await getDoc(gameRef);
   const selected = initialGame.data()?.nextGamePlayerUids || [];
   const memberRefs = selected.map((playerUid) => memberDocument(data.roomId, playerUid));
+  const genreId = drawRandomGenre();
   return runTransaction(db, async (tx) => {
     const [roomSnap, gameSnap, ...memberSnaps] = await Promise.all([tx.get(roomRef), tx.get(gameRef), ...memberRefs.map((ref) => tx.get(ref))]);
     const room = roomSnap.data(); const game = gameSnap.data(); canHost(room || {}, uid);
@@ -307,6 +307,6 @@ async function startNextGame(uid, data) {
       assert(snapshot.data()?.status === 'active', 'failed-precondition', '参加者一覧に無効なメンバーが含まれています。');
       return { id: playerUid, ref: memberRefs[index], data: snapshot.data() };
     });
-    return { gameId: await makeGame(tx, roomRef, room, players.map((p) => ({ id: p.id, ref: p.ref, data: p.data })), game.genreId) };
+    return { gameId: await makeGame(tx, roomRef, room, players.map((p) => ({ id: p.id, ref: p.ref, data: p.data })), genreId) };
   });
 }

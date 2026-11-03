@@ -15,6 +15,12 @@ export const WORD_POOLS = Object.fromEntries(Object.entries(nouns).map(([genre, 
   selectedModifiers.flatMap((modifier) => words.map((word) => `${modifier}${word}`)),
 ]));
 
+export function drawRandomGenre() {
+  const genres = Object.keys(WORD_POOLS);
+  const index = globalThis.crypto.getRandomValues(new Uint32Array(1))[0] % genres.length;
+  return genres[index];
+}
+
 export function drawWords(genre, count) {
   const pool = WORD_POOLS[genre];
   if (!pool || pool.length < count) throw new Error('このジャンルの候補ワードが足りません。');
