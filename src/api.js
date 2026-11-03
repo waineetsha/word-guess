@@ -109,7 +109,7 @@ function canHost(room, uid) { assert(room.hostUid === uid, 'permission-denied', 
 function canPlay(member) { assert(member?.status === 'active' && ['host', 'player'].includes(member.role), 'permission-denied', 'この操作ができる参加者ではありません。'); }
 
 async function makeGame(tx, roomRef, room, playerDocs, genreId) {
-  const players = playerDocs.map((item) => ({ uid: item.id, ref: item.ref, member: item.data() }));
+  const players = playerDocs.map((item) => ({ uid: item.id, ref: item.ref, member: typeof item.data === 'function' ? item.data() : item.data }));
   assert(players.length >= 2 && players.length <= 8, 'failed-precondition', '参加者は2〜8人で開始してください。');
   const words = drawWords(genreId, players.length);
   const gameRef = doc(collection(roomRef, 'games'));
@@ -177,21 +177,26 @@ async function submitQuestion(uid, data) {
 }
 
 function advanceTurn(tx, roomRef, gameRef, game, winnerUids = game.winnerUids || []) {
-  const nextIndex = Number(game.turnIndex) + 1; const order = game.turnOrderUids;
-  if (nextIndex >= order.length) {
+  const nextIndex = Number(game.turnIndex) + 1;
+  const order = game.turnOrderUids;
+  const roundEnded = nextIndex >= order.length;
+
+  if (roundEnded && winnerUids.length > 0) {
     tx.update(gameRef, {
       status: 'finished', phase: 'finished', currentTurnUid: null, currentEventId: null,
       currentGuessUid: null, voteEligibleUids: [], voteVotedUids: [], winnerUids,
       nextGamePlayerUids: [...game.activePlayerUids], endedAt: serverTimestamp(), version: Number(game.version || 0) + 1,
     });
     tx.update(roomRef, { status: 'finished', updatedAt: serverTimestamp() });
-  } else {
-    tx.update(gameRef, {
-      phase: 'turn', turnIndex: nextIndex, currentTurnUid: order[nextIndex], currentEventId: null,
-      currentGuessUid: null, voteEligibleUids: [], voteVotedUids: [], voteEligibleCount: 0,
-      winnerUids, version: Number(game.version || 0) + 1,
-    });
+    return;
   }
+
+  const followingIndex = roundEnded ? 0 : nextIndex;
+  tx.update(gameRef, {
+    phase: 'turn', turnIndex: followingIndex, currentTurnUid: order[followingIndex], currentEventId: null,
+    currentGuessUid: null, voteEligibleUids: [], voteVotedUids: [], voteEligibleCount: 0,
+    winnerUids, version: Number(game.version || 0) + 1,
+  });
 }
 
 async function submitAnswer(uid, data) {
