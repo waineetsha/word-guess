@@ -120,7 +120,7 @@ function gameView() {
   if (!me || me.role === 'spectator' || me.status !== 'active') action = '<div class="action-box"><h3>観戦中</h3><p>ゲームの進行と投票結果をリアルタイムで確認できます。</p></div>';
   const list = playerList.map((m) => memberCard(m)).join('');
   const spectatorList = state.members.filter((m) => m.role === 'spectator' && m.status === 'active').map((m) => `<span class="tag">観戦：${escapeHtml(m.displayName)}</span>`).join(' ');
-  return `<main class="layout"><div class="turn-banner"><span>${state.room?.genreId ? `ジャンル：${escapeHtml(genres[state.room.genreId] || state.room.genreId)}` : 'ゲーム中'}</span><span>${myTurn ? 'あなたのターンです' : `${escapeHtml(turnName)}のターン`}</span></div>${state.error ? `<div class="callout error">${escapeHtml(state.error)}</div>` : ''}<div class="game-columns"><section><div class="players">${list}</div>${spectatorList ? `<div style="margin-top:10px">${spectatorList}</div>` : ''}${action}<p class="note">自分のワードは他の参加者に表示されています。解答の成否は投票で決まります。</p></section>${historyView()}</div></main>`;
+  return `<main class="layout"><div class="turn-banner"><span>${state.room?.genreId ? `ジャンル：${escapeHtml(genres[state.room.genreId] || state.room.genreId)}` : 'ゲーム中'}</span><span>${myTurn ? 'あなたのターンです' : `${escapeHtml(turnName)}のターン`}</span></div>${state.error ? `<div class="callout error">${escapeHtml(state.error)}</div>` : ''}<div class="game-columns"><section><div class="players">${list}</div>${spectatorList ? `<div style="margin-top:10px">${spectatorList}</div>` : ''}${action}<p class="note">自分のワードは他の参加者には表示されません。解答の成否は投票で決まります。</p></section>${historyView()}</div></main>`;
 }
 function resultsView() {
   const winnerUids = state.game?.winnerUids || [];
@@ -255,7 +255,11 @@ else {
       // Joining an existing UID restores its seat; a new UID enters as a spectator after game start.
       const name = localStorage.getItem('word-game-display-name');
       if (name) enterRoom(roomId, name).catch((error) => { state.error = errorMessage(error); state.roomId = ''; render(); });
-      else render();
+      else {
+        // A fresh browser profile has no saved display name. Show the join form with the invite room prefilled.
+        state.roomId = '';
+        render();
+      }
     } else render();
   }).catch((error) => { state.error = errorMessage(error); render(); });
 }
