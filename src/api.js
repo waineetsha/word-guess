@@ -148,9 +148,12 @@ async function getGameView(uid, data) {
   const [memberSnap, gameSnap] = await Promise.all([getDoc(memberDocument(data.roomId, uid)), getDoc(gameRef)]);
   assert(memberSnap.exists() && memberSnap.data().status === 'active', 'permission-denied', 'この部屋の参加者ではありません。');
   assert(gameSnap.exists(), 'not-found', 'ゲームが見つかりません。');
-  const activeUids = gameSnap.data().activePlayerUids || [];
+  const game = gameSnap.data();
+  const activeUids = game.activePlayerUids || [];
   const member = memberSnap.data();
-  const myWordSnap = activeUids.includes(uid) && member.role !== 'spectator' ? await getDoc(doc(gameRef, 'privateWords', uid)) : null;
+  const myWordSnap = game.status === 'finished' && activeUids.includes(uid) && member.role !== 'spectator'
+    ? await getDoc(doc(gameRef, 'privateWords', uid))
+    : null;
   const otherUids = activeUids.filter((playerUid) => playerUid !== uid);
   const cards = await Promise.all(otherUids.map(async (playerUid) => {
     const card = await getDoc(doc(gameRef, 'publicCards', playerUid));

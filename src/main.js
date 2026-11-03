@@ -5,7 +5,7 @@ import { call, watchRoom } from './api.js';
 const root = document.querySelector('#app');
 const state = {
   uid: null, roomId: new URLSearchParams(location.search).get('room') || '',
-  room: null, members: [], game: null, events: [], secretWord: '', gameCards: [], secretGameId: '',
+  room: null, members: [], game: null, events: [], secretWord: '', gameCards: [], secretGameId: '', secretRevealGameId: '',
   busy: false, error: '', notice: '', unsubscribe: null, selectedVote: '', resolvingGameId: '',
 };
 const genres = { animals: '動物', food: '食べ物', objects: '身の回りのもの' };
@@ -152,7 +152,7 @@ function render() {
   root.innerHTML = `<div class="app-shell">${headerHtml}${view}</div>${notice}`;
 }
 function startWatching(roomId) {
-  state.unsubscribe?.(); state.unsubscribe = null; state.roomId = roomId; state.room = null; state.game = null; state.events = []; state.secretWord = ''; state.secretGameId = ''; state.error = '';
+  state.unsubscribe?.(); state.unsubscribe = null; state.roomId = roomId; state.room = null; state.game = null; state.events = []; state.secretWord = ''; state.secretGameId = ''; state.secretRevealGameId = ''; state.error = '';
   history.replaceState({}, '', `${location.pathname}?room=${encodeURIComponent(roomId)}`);
   state.unsubscribe = watchRoom(roomId, {
     onRoom: (room) => { state.room = room; if (!room) state.error = '部屋が見つかりません。'; render(); },
@@ -163,10 +163,15 @@ function startWatching(roomId) {
         state.resolvingGameId = game.id;
         call('resolveVotes', { roomId, gameId: game.id }).catch(() => { state.resolvingGameId = ''; });
       }
-      if (game?.id && game.id !== state.secretGameId) {
-        state.secretGameId = game.id; state.secretWord = ''; state.gameCards = [];
+      const isNewGame = Boolean(game?.id && game.id !== state.secretGameId);
+      const revealFinishedWord = Boolean(game?.id && game.status === 'finished' && state.secretRevealGameId !== game.id);
+      if (isNewGame) {
+        state.secretGameId = game.id; state.secretWord = ''; state.gameCards = []; state.secretRevealGameId = '';
+      }
+      if (isNewGame || revealFinishedWord) {
+        if (revealFinishedWord) state.secretRevealGameId = game.id;
         try { const result = await call('getGameView', { roomId, gameId: game.id }); state.secretWord = result.myWord || ''; state.gameCards = result.cards || []; }
-        catch { /* New spectators have no personal word. */ }
+        catch { /* Spectators have no personal word. */ }
       }
       render();
     },
