@@ -47,12 +47,12 @@ function homeView() {
 }
 function memberForMe() { return state.members.find((m) => m.uid === state.uid); }
 function isHost() { return state.room?.hostUid === state.uid; }
-function activePlayers() { return state.members.filter((m) => m.status === 'active' && m.role === 'player'); }
+function activePlayers() { return state.members.filter((m) => m.status === 'active' && ['host', 'player'].includes(m.role)); }
 function avatar(name = '?') { return escapeHtml([...String(name)][0] || '?'); }
 function memberCard(member, currentGame = state.game) {
   const isMe = member.uid === state.uid;
   const won = currentGame?.winnerUids?.includes(member.uid);
-  const isPlayer = member.status === 'active' && member.role === 'player';
+  const isPlayer = member.status === 'active' && ['host', 'player'].includes(member.role);
   const word = isMe ? (state.secretWord || '？？？') : (state.gameCards.find((card) => card.uid === member.uid)?.wordText || 'ワード');
   return `<article class="player-card ${isMe ? 'me' : ''}">${won ? '<span class="winner-mark">★ 勝利</span>' : ''}${isMe ? '<div class="player-you">あなた</div>' : ''}<div class="player-name">${escapeHtml(member.displayName || '参加者')}${!isPlayer ? ' <span class="tag">観戦者</span>' : ''}</div><div class="player-word ${isMe && !state.secretWord ? 'hidden' : ''}">${escapeHtml(word)}</div></article>`;
 }
@@ -85,14 +85,14 @@ function currentQuestion() { return state.events.find((e) => e.id === state.game
 function answeringPanel() {
   const q = currentQuestion();
   const already = q?.answeredByUid === state.uid;
-  const eligible = state.uid !== q?.actorUid && memberForMe()?.role === 'player' && memberForMe()?.status === 'active';
+  const eligible = state.uid !== q?.actorUid && ['host', 'player'].includes(memberForMe()?.role) && memberForMe()?.status === 'active';
   if (eligible && !q?.answer && !already) return `<div class="action-box"><h3>質問に回答してください</h3><p>${escapeHtml(q?.questionText || '')}</p><div class="btn-row"><button class="btn" data-answer="yes">はい</button><button class="btn btn-soft" data-answer="no">いいえ</button><button class="btn btn-outline" data-answer="maybe">どちらともいえない</button></div></div>`;
   return `<div class="action-box"><h3>回答を待っています</h3><p>${escapeHtml(q?.questionText || '')}</p><div class="callout">${q?.answer ? '回答が確定しました。次の手番へ進みます。' : '質問者以外のプレイヤーが回答できます。'}</div></div>`;
 }
 function votingPanel() {
   const voted = state.game?.voteVotedUids || [];
   const guesserUid = state.game?.currentGuessUid;
-  const eligible = state.uid !== guesserUid && memberForMe()?.role === 'player' && memberForMe()?.status === 'active';
+  const eligible = state.uid !== guesserUid && ['host', 'player'].includes(memberForMe()?.role) && memberForMe()?.status === 'active';
   const already = voted.includes(state.uid);
   const event = currentQuestion();
   const guessed = state.events.find((e) => e.id === state.game?.currentEventId);
